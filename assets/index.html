@@ -1,11 +1,391 @@
-?<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>低利用率主机统计通报系统</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>低利用率主机统计通报系统</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css">
+  <style>
+    :root {
+      --paper: #f7f3ea;
+      --paper-deep: #efe8da;
+      --ink: #2f2a24;
+      --muted: #7a7064;
+      --line: #d8cdbb;
+      --accent: #8a5a3b;
+      --accent-soft: #b98b66;
+      --danger: #9b2c2c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.85), transparent 28rem),
+        radial-gradient(circle at 88% 92%, rgba(239, 232, 218, 0.9), transparent 32rem),
+        var(--paper);
+      font-family: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+    }
+
+    .page {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 28px 24px 36px;
+    }
+
+    header {
+      margin-bottom: 22px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(150px, 180px) minmax(0, 1fr) 148px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(255, 253, 248, 0.82);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      box-shadow: 0 10px 24px rgba(74, 60, 45, 0.06);
+    }
+
+    .left-panel,
+    .right-panel {
+      padding: 16px;
+    }
+
+    .left-panel label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .left-panel select {
+      width: 100%;
+      min-height: 34px;
+      border-color: var(--line);
+      color: var(--ink);
+      background: #fffdf8;
+    }
+
+    .center-panel {
+      min-width: 0;
+      padding: 14px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 230px);
+      border: 1px solid var(--line);
+      background: #fffdf8;
+    }
+
+    table {
+      width: 100%;
+      margin: 0;
+      border-collapse: collapse;
+      white-space: nowrap;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--paper-deep);
+      color: var(--ink);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--line);
+    }
+
+    tbody td {
+      color: #3d362e;
+      border-bottom: 1px solid #eee6d9;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fbf7ef;
+    }
+
+    tbody tr:hover {
+      background: #f4eadb;
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .right-panel .pure-button {
+      width: 100%;
+      border: 1px solid #cbbba5;
+      border-radius: 3px;
+      color: var(--ink);
+      background: #fffaf1;
+      font-family: inherit;
+      letter-spacing: 0.08em;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+    }
+
+    .right-panel .pure-button:hover,
+    .right-panel .pure-button:focus {
+      border-color: var(--accent-soft);
+      background: #f6ead9;
+    }
+
+    .right-panel .pure-button:active {
+      transform: translateY(1px);
+    }
+
+    .right-panel .pure-button-primary {
+      border-color: var(--accent);
+      color: #fffaf2;
+      background: var(--accent);
+    }
+
+    .right-panel .pure-button-primary:hover,
+    .right-panel .pure-button-primary:focus {
+      border-color: #73482e;
+      background: #73482e;
+    }
+
+    @media (max-width: 860px) {
+      .page {
+        padding: 18px 12px 28px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .right-panel {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .right-panel .pure-button {
+        width: auto;
+        flex: 1 1 86px;
+      }
+
+      .table-wrap {
+        max-height: 60vh;
+      }
+    }
+  </style>
 </head>
 <body>
-    
+  <div class="page">
+    <header>
+      <h1>主机数据查看器</h1>
+      <p>SQLite · host.db · 表 xiajia</p>
+    </header>
+
+    <main class="layout">
+      <aside class="panel left-panel">
+        <label for="tableSelect">数据表</label>
+        <select id="tableSelect" class="pure-input-1">
+          <option value="">（暂无）</option>
+        </select>
+      </aside>
+
+      <section class="panel center-panel">
+        <div class="table-wrap">
+          <table class="pure-table pure-table-bordered" id="dataTable">
+            <thead>
+              <tr>
+                <th>主机名</th>
+                <th>IP</th>
+                <th>CPU最大值</th>
+                <th>内存最大值</th>
+                <th>部门</th>
+                <th>应用系统</th>
+                <th>次数</th>
+              </tr>
+            </thead>
+            <tbody id="dataBody"></tbody>
+          </table>
+        </div>
+        <div id="status" class="status">正在加载...</div>
+      </section>
+
+      <aside class="panel right-panel">
+        <button id="btnRefresh" type="button" class="pure-button pure-button-primary">刷新</button>
+        <button id="btnUpdate" type="button" class="pure-button">更新</button>
+        <button id="btnClear" type="button" class="pure-button">清除</button>
+        <button id="btnExport" type="button" class="pure-button">导出</button>
+        <button id="btnRollback" type="button" class="pure-button">回滚</button>
+        <button id="btnSave" type="button" class="pure-button">保存</button>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const tbody = document.getElementById("dataBody");
+      const statusEl = document.getElementById("status");
+      const btnRefresh = document.getElementById("btnRefresh");
+      const btnClear = document.getElementById("btnClear");
+      const btnExport = document.getElementById("btnExport");
+      const btnUpdate = document.getElementById("btnUpdate");
+      const btnRollback = document.getElementById("btnRollback");
+      const btnSave = document.getElementById("btnSave");
+
+      const FIELDS = ["hostname", "ip", "cpu_max", "mem_max", "dept", "app", "count"];
+      const CSV_HEADERS = ["主机名", "IP", "CPU最大值", "内存最大值", "部门", "应用系统", "次数"];
+
+      let currentRows = [];
+
+      function setStatus(message, isError) {
+        statusEl.textContent = message;
+        statusEl.classList.toggle("error", Boolean(isError));
+      }
+
+      function makeCell(value) {
+        const td = document.createElement("td");
+        td.textContent = value == null ? "" : String(value);
+        return td;
+      }
+
+      function renderRows(rows) {
+        currentRows = Array.isArray(rows) ? rows : [];
+        tbody.replaceChildren();
+
+        for (const row of currentRows) {
+          const tr = document.createElement("tr");
+          for (const field of FIELDS) {
+            tr.appendChild(makeCell(row[field]));
+          }
+          tbody.appendChild(tr);
+        }
+      }
+
+      async function loadData() {
+        setStatus("正在加载...");
+
+        try {
+          const response = await fetch("/query", {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+          });
+
+          if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+          }
+
+          const data = await response.json();
+
+          if (!data.ok) {
+            renderRows([]);
+            setStatus("读取数据库失败：" + (data.error || "未知错误"), true);
+            return;
+          }
+
+          renderRows(data.rows);
+          setStatus("已加载 " + (data.total == null ? currentRows.length : data.total) + " 行");
+        } catch (err) {
+          renderRows([]);
+          setStatus("请求 /query 失败：" + err.message, true);
+        }
+      }
+
+      function csvEscape(value) {
+        const text = value == null ? "" : String(value);
+        if (/[",\r\n]/.test(text)) {
+          return '"' + text.replace(/"/g, '""') + '"';
+        }
+        return text;
+      }
+
+      function exportCsv() {
+        if (currentRows.length === 0) {
+          setStatus("当前没有可导出的数据", true);
+          return;
+        }
+
+        const lines = [CSV_HEADERS];
+        for (const row of currentRows) {
+          lines.push(FIELDS.map((field) => csvEscape(row[field])));
+        }
+
+        const csv = "\ufeff" + lines.map((cols) => cols.join(",")).join("\r\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+
+        a.href = url;
+        a.download = "xiajia-" + stamp + ".csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        setStatus("已导出 " + currentRows.length + " 行");
+      }
+
+      function notImplemented(name) {
+        return function () {
+          setStatus("“" + name + "”功能尚未实现（示例页面）", false);
+        };
+      }
+
+      btnRefresh.addEventListener("click", loadData);
+
+      btnClear.addEventListener("click", function () {
+        renderRows([]);
+        setStatus("表格已清空（不会修改数据库）");
+      });
+
+      btnExport.addEventListener("click", exportCsv);
+
+      btnUpdate.addEventListener("click", notImplemented("更新"));
+      btnRollback.addEventListener("click", notImplemented("回滚"));
+      btnSave.addEventListener("click", notImplemented("保存"));
+
+      window.addEventListener("DOMContentLoaded", loadData);
+    })();
+  </script>
 </body>
 </html>
