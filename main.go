@@ -1,7 +1,6 @@
 package main
 
 import (
-	_ "embed"
 	"hostmonitorsystem/sqlite"
 	"log"
 
@@ -13,27 +12,9 @@ import (
 var config Config
 var gin_r *gin.Engine
 
-type HostRow struct {
-	Hostname string `json:"hostname"`
-	IP       string `json:"ip"`
-	CPUMax   string `json:"cpu_max"`
-	MemMax   string `json:"mem_max"`
-	Dept     string `json:"dept"`
-	App      string `json:"app"`
-	Count    string `json:"count"`
-}
-
-// QueryResult 是 /query 的响应体
-type QueryResult struct {
-	OK    bool      `json:"ok"`
-	Error string    `json:"error,omitempty"`
-	Total int       `json:"total"`
-	Rows  []HostRow `json:"rows"`
-}
-
 func main() {
 	initConfig()
-	err := sqlite.InitDB(config.host_db_name)
+	err := sqlite.InitDB(config.Host_db_name)
 	if err != nil {
 		println("初始化数据库失败")
 		panic(err)
@@ -41,8 +22,8 @@ func main() {
 	defer sqlite.CloseDB()
 	initGin()
 
-	log.Printf("服务已启动: http://%s", config.host+":"+config.port+"/")
-	if err := gin_r.Run(config.host + ":" + config.port); err != nil {
+	log.Println("服务已启动: http://" + config.Host + ":" + config.Port + "/")
+	if err := gin_r.Run(config.Host + ":" + config.Port); err != nil {
 		println("服务启动失败")
 		panic(err.Error())
 	}

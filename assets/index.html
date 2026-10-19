@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -96,6 +97,43 @@
     .center-panel {
       min-width: 0;
       padding: 14px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab {
+      padding: 8px 18px;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      color: var(--muted);
+      background: transparent;
+      font-family: inherit;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .tab:hover,
+    .tab:focus {
+      color: var(--ink);
+      background: #f6ead9;
+      outline: none;
+    }
+
+    .tab.active {
+      color: var(--ink);
+      background: #fffdf8;
+      border-color: var(--line);
+      border-bottom: 1px solid #fffdf8;
+      margin-bottom: -1px;
+      font-weight: 600;
     }
 
     .table-wrap {
@@ -212,11 +250,11 @@
     }
   </style>
 </head>
+
 <body>
   <div class="page">
     <header>
       <h1>主机数据查看器</h1>
-      <p>SQLite · host.db · 表 xiajia</p>
     </header>
 
     <main class="layout">
@@ -228,6 +266,11 @@
       </aside>
 
       <section class="panel center-panel">
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" role="tab" aria-selected="true" data-tab="xiajia"
+            id="tab1">下架通报表</button>
+          <button type="button" class="tab" role="tab" aria-selected="false" data-tab="jiangpei" id="tab2">降配通报表</button>
+        </div>
         <div class="table-wrap">
           <table class="pure-table pure-table-bordered" id="dataTable">
             <thead>
@@ -262,23 +305,24 @@
     (function () {
       "use strict";
 
-      const tbody = document.getElementById("dataBody");
-      const statusEl = document.getElementById("status");
-      const btnRefresh = document.getElementById("btnRefresh");
-      const btnClear = document.getElementById("btnClear");
-      const btnExport = document.getElementById("btnExport");
-      const btnUpdate = document.getElementById("btnUpdate");
-      const btnRollback = document.getElementById("btnRollback");
-      const btnSave = document.getElementById("btnSave");
+      const 表格 = document.getElementById("dataBody");
+      const 状态文本 = document.getElementById("status");
+      const 刷新按钮 = document.getElementById("btnRefresh");
+      const 清除按钮 = document.getElementById("btnClear");
+      const 导出按钮 = document.getElementById("btnExport");
+      const 更新按钮 = document.getElementById("btnUpdate");
+      const 回滚按钮 = document.getElementById("btnRollback");
+      const 保存快照按钮 = document.getElementById("btnSave");
+      const 两个标签按钮 = document.querySelectorAll(".tab");
 
-      const FIELDS = ["hostname", "ip", "cpu_max", "mem_max", "dept", "app", "count"];
+      const FIELDS = ["hostname", "ip", "cpu_max", "mem_max", "dept", "appsystem", "count"];
       const CSV_HEADERS = ["主机名", "IP", "CPU最大值", "内存最大值", "部门", "应用系统", "次数"];
 
       let currentRows = [];
 
       function setStatus(message, isError) {
-        statusEl.textContent = message;
-        statusEl.classList.toggle("error", Boolean(isError));
+        状态文本.textContent = message;
+        状态文本.classList.toggle("error", Boolean(isError));
       }
 
       function makeCell(value) {
@@ -289,22 +333,21 @@
 
       function renderRows(rows) {
         currentRows = Array.isArray(rows) ? rows : [];
-        tbody.replaceChildren();
+        表格.replaceChildren();
 
         for (const row of currentRows) {
           const tr = document.createElement("tr");
           for (const field of FIELDS) {
             tr.appendChild(makeCell(row[field]));
           }
-          tbody.appendChild(tr);
+          表格.appendChild(tr);
         }
       }
 
-      async function loadData() {
+      async function loadData(table_name) {
         setStatus("正在加载...");
-
         try {
-          const response = await fetch("/query", {
+          const response = await fetch("/query/"+table_name, {
             method: "GET",
             headers: { "Accept": "application/json" },
             cache: "no-store"
@@ -316,17 +359,11 @@
 
           const data = await response.json();
 
-          if (!data.ok) {
-            renderRows([]);
-            setStatus("读取数据库失败：" + (data.error || "未知错误"), true);
-            return;
-          }
-
-          renderRows(data.rows);
+          renderRows(data.table);
           setStatus("已加载 " + (data.total == null ? currentRows.length : data.total) + " 行");
         } catch (err) {
           renderRows([]);
-          setStatus("请求 /query 失败：" + err.message, true);
+          setStatus("请求 /query/"+table_name+" 失败：" + err.message, true);
         }
       }
 
@@ -370,22 +407,40 @@
           setStatus("“" + name + "”功能尚未实现（示例页面）", false);
         };
       }
+      function switchTab(activeTab) {
+        两个标签按钮.forEach(function (tab) {
+          const isActive = tab === activeTab;
+          tab.classList.toggle("active", isActive);
+          tab.setAttribute("aria-selected", isActive ? "true" : "false");
+        });
 
-      btnRefresh.addEventListener("click", loadData);
 
-      btnClear.addEventListener("click", function () {
+        if (activeTab.dataset.tab === "xiajia") { loadData("xiajia"); }
+        else if (activeTab.dataset.tab === "jiangpei") { loadData("jiangpei"); }
+      }
+
+      两个标签按钮.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          switchTab(tab);
+        });
+      });
+
+      刷新按钮.addEventListener("click", loadData);
+
+      清除按钮.addEventListener("click", function () {
         renderRows([]);
         setStatus("表格已清空（不会修改数据库）");
       });
 
-      btnExport.addEventListener("click", exportCsv);
+      导出按钮.addEventListener("click", exportCsv);
 
-      btnUpdate.addEventListener("click", notImplemented("更新"));
-      btnRollback.addEventListener("click", notImplemented("回滚"));
-      btnSave.addEventListener("click", notImplemented("保存"));
+      更新按钮.addEventListener("click", notImplemented("更新"));
+      回滚按钮.addEventListener("click", notImplemented("回滚"));
+      保存快照按钮.addEventListener("click", notImplemented("保存"));
 
-      window.addEventListener("DOMContentLoaded", loadData);
+      window.addEventListener("DOMContentLoaded", loadData("xiajia"));
     })();
   </script>
 </body>
+
 </html>

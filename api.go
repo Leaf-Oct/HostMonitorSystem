@@ -1,6 +1,7 @@
 package main
 
 import (
+	"hostmonitorsystem/sqlite"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +24,9 @@ func aboutHandler(c *gin.Context) {
 func queryHandler(c *gin.Context) {
 	table_name := c.Param("table")
 	if table_name == "" {
-
+		// 响应错误，未设置表名
+		c.String(http.StatusBadRequest, "No table name")
 	}
+	tables := sqlite.QueryTableAll(table_name)
+	c.JSON(http.StatusOK, *tables)
 }
